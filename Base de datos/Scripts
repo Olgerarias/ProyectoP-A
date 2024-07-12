@@ -1,1 +1,73 @@
+-- Crear la base de datos
+CREATE DATABASE bd_guitarras;
+
+-- Usar la base de datos bd_guitarras
+USE bd_guitarras;
+
+-- Crear la tabla 'categorias'
+CREATE TABLE categorias (
+  id INT(11) PRIMARY KEY AUTO_INCREMENT,
+  nombre VARCHAR(50) NOT NULL
+);
+
+-- Crear la tabla 'cliente'
+CREATE TABLE cliente (
+  id INT(11) PRIMARY KEY AUTO_INCREMENT,
+  nombre VARCHAR(50) NOT NULL,
+  correo VARCHAR(50) NOT NULL,
+  telefono VARCHAR(20) NOT NULL
+);
+
+-- Crear la tabla 'guitarras'
+CREATE TABLE guitarras (
+  id INT(11) PRIMARY KEY AUTO_INCREMENT,
+  title VARCHAR(200) NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  thumbnail VARCHAR(200) NOT NULL
+);
+
+-- Crear la tabla 'guitarras_categorias'
+CREATE TABLE guitarras_categorias (
+  id INT(11) PRIMARY KEY AUTO_INCREMENT,
+  guitarra_id INT(11) NOT NULL,
+  categoria_id INT(11) NOT NULL,
+  FOREIGN KEY (guitarra_id) REFERENCES guitarras(id),
+  FOREIGN KEY (categoria_id) REFERENCES categorias(id)
+);
+
+
+
+
+
+Vistas
+
+1. Vista para Clientes:
+
+SQL
+CREATE VIEW VistaClientes AS
+SELECT
+  c.id,
+  c.nombre,
+  c.correo,
+  c.telefono,
+  -- Agregar dos columnas adicionales (ejemplos)
+  v.ciudad AS ciudad_residencia,
+  v.membresia AS tipo_membresia
+FROM cliente c
+LEFT JOIN Cliente_DatosAdicionales v ON c.id = v.id_cliente;
+
+
+CREATE VIEW VistaGuitarras AS
+SELECT
+  g.id,
+  g.title,
+  g.price,
+  g.thumbnail,
+  -- Agregar dos columnas adicionales (ejemplos)
+  v.marca AS marca_guitarra,
+  v.descuento AS porcentaje_descuento
+FROM guitarras g
+LEFT JOIN Guitarra_DatosAdicionales v ON g.id = v.id_guitarra;
+
+
 
