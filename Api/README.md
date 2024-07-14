@@ -4,16 +4,16 @@ Guitarras
  
 Obtener Guitarras
 
-Get:
+Get:http://localhost/api2/api.php/api.php?request=guitars
  
 Agregar Guitarras
 
-Post:
+Post:http://localhost/api2/api.php/api.php?request=guitars
  
 Editar Guitarras
 
-Put:
+Put:http://localhost/api2/api.php/api.php?request=guitars
  
 Eliminar Guitarras
 
-Delete:
+Delete:http://localhost/api2/api.php/api.php?request=guitars
