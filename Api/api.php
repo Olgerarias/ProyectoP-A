@@ -1,72 +1,152 @@
-<?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, GET, PUT, DELETE');
-header('Access-Control-Allow-Headers: Content-Type');
-
-$method = $_SERVER['REQUEST_METHOD'];
-$input = json_decode(file_get_contents('php://input'), true);
-
-$mysqli = new mysqli('localhost', 'root', '', 'guitar_store');
-
-if ($mysqli->connect_error) {
-    die('Connection failed: ' . $mysqli->connect_error);
-}
-
-$request = $_GET['request']; // Add this line to get the request type
-
-switch ($method) {
-    case 'GET':
-        if ($request == 'guitars') {
-            $result = $mysqli->query('SELECT * FROM guitars');
-            $guitars = $result->fetch_all(MYSQLI_ASSOC);
-            echo json_encode($guitars);
-        } elseif ($request == 'users') {
-            $result = $mysqli->query('SELECT * FROM users');
-            $users = $result->fetch_all(MYSQLI_ASSOC);
-            echo json_encode($users);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guitar Store</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            padding: 20px;
+            background-image: url('/frontend/img/fondo01.jpg');
+            background-size: cover;
+            background-position: center;
         }
-        break;
-    case 'POST':
-        if ($request == 'guitars') {
-            $stmt = $mysqli->prepare('INSERT INTO guitars (brand, model, price) VALUES (?, ?, ?)');
-            $stmt->bind_param('ssd', $input['brand'], $input['model'], $input['price']);
-            $stmt->execute();
-            echo json_encode(['id' => $stmt->insert_id]);
-        } elseif ($request == 'users') {
-            $stmt = $mysqli->prepare('INSERT INTO users (name, email, password) VALUES (?, ?, ?)');
-            $stmt->bind_param('sss', $input['name'], $input['email'], password_hash($input['password'], PASSWORD_DEFAULT));
-            $stmt->execute();
-            echo json_encode(['id' => $stmt->insert_id]);
+        .table th, .table td {
+            vertical-align: middle;
         }
-        break;
-    case 'PUT':
-        if ($request == 'guitars') {
-            $stmt = $mysqli->prepare('UPDATE guitars SET brand=?, model=?, price=? WHERE id=?');
-            $stmt->bind_param('ssdi', $input['brand'], $input['model'], $input['price'], $input['id']);
-            $stmt->execute();
-            echo json_encode($input);
-        } elseif ($request == 'users') {
-            $stmt = $mysqli->prepare('UPDATE users SET name=?, email=?, password=? WHERE id=?');
-            $stmt->bind_param('sssi', $input['name'], $input['email'], password_hash($input['password'], PASSWORD_DEFAULT), $input['id']);
-            $stmt->execute();
-            echo json_encode($input);
+        .form-inline .form-control {
+            margin-right: 10px;
         }
-        break;
-    case 'DELETE':
-        if ($request == 'guitars') {
-            $stmt = $mysqli->prepare('DELETE FROM guitars WHERE id=?');
-            $stmt->bind_param('i', $input['id']);
-            $stmt->execute();
-            echo json_encode(['result' => 'success']);
-        } elseif ($request == 'users') {
-            $stmt = $mysqli->prepare('DELETE FROM users WHERE id=?');
-            $stmt->bind_param('i', $input['id']);
-            $stmt->execute();
-            echo json_encode(['result' => 'success']);
+        img {
+            max-width: 100px;
+            height: auto;
         }
-        break;
-}
+        .center-content {
+            text-align: center;
+        }
+        .title {
+            font-size: 3rem;
+        }
+        .subtitle {
+            font-size: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container center-content">
+        <h1 class="mb-4 title">Guitar Store</h1>
+        <h2 class="subtitle">Incluir guitarras</h2>
+        <form id="guitarForm" class="form-inline mb-4 justify-content-center">
+            <input type="hidden" id="guitarId" name="id">
+            <input type="text" id="guitarBrand" name="brand" class="form-control" placeholder="Brand" required>
+            <input type="text" id="guitarModel" name="model" class="form-control" placeholder="Model" required>
+            <input type="number" id="guitarPrice" name="price" class="form-control" placeholder="Price" required>
+            <input type="text" id="guitarImage" name="image_path" class="form-control" placeholder="Image URL" required>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+        <table class="table table-bordered">
+            <thead class="thead-light">
+                <tr>
+                    <th>Brand</th>
+                    <th>Model</th>
+                    <th>Price</th>
+                    <th>Image</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="guitarList"></tbody>
+        </table>
+    </div>
 
-$mysqli->close();
-?>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const guitarForm = document.getElementById('guitarForm');
+            const guitarList = document.getElementById('guitarList');
+
+            // Fetch all guitars
+            const fetchGuitars = () => {
+                fetch('../api/api.php?request=guitars')
+                    .then(response => response.json())
+                    .then(data => {
+                        guitarList.innerHTML = '';
+                        data.forEach(guitar => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${guitar.brand}</td>
+                                <td>${guitar.model}</td>
+                                <td>$${guitar.price}</td>
+                                <td><img src="${guitar.image_path}" alt="${guitar.brand} ${guitar.model}"></td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" onclick="editGuitar(${guitar.id}, '${guitar.brand}', '${guitar.model}', ${guitar.price}, '${guitar.image_path}')">Edit</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteGuitar(${guitar.id})">Delete</button>
+                                </td>
+                            `;
+                            guitarList.appendChild(row);
+                        });
+                    });
+            };
+
+            // Save guitar (create or update)
+            const saveGuitar = (event) => {
+                event.preventDefault();
+                const id = document.getElementById('guitarId').value;
+                const brand = document.getElementById('guitarBrand').value;
+                const model = document.getElementById('guitarModel').value;
+                const price = document.getElementById('guitarPrice').value;
+                const image_path = document.getElementById('guitarImage').value;
+
+                const method = id ? 'PUT' : 'POST';
+                fetch('../api/api.php?request=guitars', {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ id, brand, model, price, image_path }),
+                }).then(response => {
+                    if (response.ok) {
+                        fetchGuitars();
+                        guitarForm.reset();
+                    } else {
+                        console.error('Failed to save guitar');
+                    }
+                });
+            };
+
+            // Edit guitar (populate form with selected guitar data)
+            window.editGuitar = (id, brand, model, price, image_path) => {
+                document.getElementById('guitarId').value = id;
+                document.getElementById('guitarBrand').value = brand;
+                document.getElementById('guitarModel').value = model;
+                document.getElementById('guitarPrice').value = price;
+                document.getElementById('guitarImage').value = image_path;
+            };
+
+            // Delete guitar
+            window.deleteGuitar = (id) => {
+                fetch('../api/api.php?request=guitars', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ id }),
+                }).then(response => {
+                    if (response.ok) {
+                        fetchGuitars();
+                    } else {
+                        console.error('Failed to delete guitar');
+                    }
+                });
+            };
+
+            guitarForm.addEventListener('submit', saveGuitar);
+
+            fetchGuitars();
+        });
+    </script>
+</body>
+</html>
+
+
